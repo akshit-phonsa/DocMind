@@ -1,0 +1,13 @@
+package com.example.docmind.docmind_backend;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class DocmindBackendApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
