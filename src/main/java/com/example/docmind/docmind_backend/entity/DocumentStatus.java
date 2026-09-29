@@ -1,7 +1,7 @@
 package com.example.docmind.docmind_backend.entity;
 
 public enum DocumentStatus {
-    LOADING,
+    UPLOADING,
     PROCESSING,
     INDEXED,
     FAILED
