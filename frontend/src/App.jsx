@@ -6,6 +6,7 @@ import UploadDialog from './components/UploadDialog.jsx'
 import SearchDialog from './components/SearchDialog.jsx'
 import DocumentDialog from './components/DocumentDialog.jsx'
 import { listDocuments } from './lib/api.js'
+import { DEFAULT_RETRIEVAL } from './components/RetrievalSettings.jsx'
 
 export default function App() {
   const [docs, setDocs] = useState([])
@@ -13,6 +14,9 @@ export default function App() {
   const [error, setError] = useState('')
   const [scopeId, setScopeId] = useState(null) // null = all documents
   const [dark, setDark] = useState(() => (localStorage.getItem('docmind-theme') || 'dark') === 'dark')
+  const [retrieval, setRetrieval] = useState(() => {
+    try { return { ...DEFAULT_RETRIEVAL, ...JSON.parse(localStorage.getItem('docmind-retrieval')) } } catch { return DEFAULT_RETRIEVAL }
+  })
   const [uploadOpen, setUploadOpen] = useState(false)
   const [initialFiles, setInitialFiles] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -30,6 +34,8 @@ export default function App() {
   }, [])
 
   useEffect(() => { refresh() }, [refresh])
+
+  useEffect(() => { localStorage.setItem('docmind-retrieval', JSON.stringify(retrieval)) }, [retrieval])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -79,7 +85,7 @@ export default function App() {
       {uploadOpen && (
         <UploadDialog initialFiles={initialFiles} onClose={() => setUploadOpen(false)} onUploaded={refresh} />
       )}
-      {searchOpen && <SearchDialog scopeDoc={scopeDoc} onClose={() => setSearchOpen(false)} />}
+      {searchOpen && <SearchDialog scopeDoc={scopeDoc} retrieval={retrieval} onRetrieval={setRetrieval} onClose={() => setSearchOpen(false)} />}
       {detailId && (
         <DocumentDialog
           id={detailId}

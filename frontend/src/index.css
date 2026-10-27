@@ -31,3 +31,24 @@ body { @apply bg-slate-50 text-slate-900 dark:bg-ink-950 dark:text-slate-100 ant
 .dot { animation: dot 1.2s infinite ease-in-out; }
 @keyframes bar { from { width: 0 } }
 .animate-bar { animation: bar .8s ease-out both; }
+
+/* Smooth gradient range slider; --p is the fill percentage set inline */
+.slider {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 9999px; outline: none; cursor: pointer;
+  background: linear-gradient(to right, #3b82f6 0%, #22d3ee var(--p), rgb(148 163 184 / .3) var(--p));
+  transition: background .12s ease-out;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 9999px; background: #fff; border: 3px solid #3b82f6;
+  box-shadow: 0 2px 8px rgb(59 130 246 / .45); transition: transform .15s ease, box-shadow .15s ease;
+}
+.slider::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 9999px; background: #fff; border: 3px solid #3b82f6;
+  box-shadow: 0 2px 8px rgb(59 130 246 / .45); transition: transform .15s ease, box-shadow .15s ease;
+}
+.slider::-moz-range-track { background: transparent; }
+.slider:hover::-webkit-slider-thumb { transform: scale(1.15); }
+.slider:active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: 0 0 0 7px rgb(59 130 246 / .18); }
+.slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px rgb(59 130 246 / .3); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(.97) } to { opacity: 1; transform: none } }
+.animate-pop { animation: pop-in .18s ease-out both; transform-origin: top right; }

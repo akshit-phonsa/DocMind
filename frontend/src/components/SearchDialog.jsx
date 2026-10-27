@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, Loader2, Search, Sparkles, X } from 'lucide-react'
+import { FileText, Loader2, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react'
+import RetrievalSettings from './RetrievalSettings.jsx'
 import Modal from './Modal.jsx'
 import { searchChunks } from '../lib/api.js'
 
-export default function SearchDialog({ scopeDoc, onClose }) {
+export default function SearchDialog({ scopeDoc, retrieval, onRetrieval, onClose }) {
+  const [tune, setTune] = useState(true)
   const [q, setQ] = useState('')
   const [res, setRes] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -16,7 +18,7 @@ export default function SearchDialog({ scopeDoc, onClose }) {
     if (!q.trim()) return
     setLoading(true); setError('')
     try {
-      setRes(await searchChunks({ query: q.trim(), documentId: scopeDoc?.id ?? null, topk: 10 }))
+      setRes(await searchChunks({ query: q.trim(), documentId: scopeDoc?.id ?? null, topk: retrieval.topK, similaritySearch: retrieval.minSimilarity }))
     } catch (err) {
       setError(err.message); setRes(null)
     } finally { setLoading(false) }
@@ -32,7 +34,7 @@ export default function SearchDialog({ scopeDoc, onClose }) {
         <button onClick={onClose} className="text-slate-400 hover:text-slate-700" aria-label="Close"><X size={20} /></button>
       </div>
 
-      <form onSubmit={run} className="flex gap-3 border-y border-slate-200 px-6 py-4">
+      <form onSubmit={run} className="flex gap-3 border-t border-slate-200 px-6 py-4">
         <div className="relative flex-1">
           <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -46,7 +48,22 @@ export default function SearchDialog({ scopeDoc, onClose }) {
         <button disabled={!q.trim() || loading} className="rounded-xl bg-blue-600 px-6 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50">
           {loading ? <Loader2 size={18} className="animate-spin" /> : 'Search'}
         </button>
+        <button
+          type="button"
+          onClick={() => setTune(!tune)}
+          aria-label="Search settings"
+          className={`flex w-12 items-center justify-center rounded-xl border transition ${tune ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-300 text-slate-500 hover:bg-slate-50'}`}
+        >
+          <SlidersHorizontal size={18} />
+        </button>
       </form>
+      <div className={`grid border-b border-slate-200 transition-all duration-300 ${tune ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] border-b-0'}`}>
+        <div className="overflow-hidden">
+          <div className="bg-slate-50 px-6 py-5">
+            <RetrievalSettings value={retrieval} onChange={onRetrieval} />
+          </div>
+        </div>
+      </div>
 
       <div className="min-h-[260px] flex-1 overflow-y-auto px-6 py-4">
         {scopeDoc && <p className="mb-3 text-xs text-slate-500">Searching in <b>{scopeDoc.fileName}</b></p>}
