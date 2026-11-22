@@ -5,6 +5,7 @@ import com.example.docmind.docmind_backend.dto.DocumentMetadataDto;
 import com.example.docmind.docmind_backend.dto.DocumentResponseDto;
 import com.example.docmind.docmind_backend.entity.DocumentMetadata;
 import com.example.docmind.docmind_backend.entity.DocumentStatus;
+import com.example.docmind.docmind_backend.entity.User;
 import com.example.docmind.docmind_backend.exception.DocumentProcessingException;
 import com.example.docmind.docmind_backend.exception.ResourceNotFoundException;
 import com.example.docmind.docmind_backend.repository.DocumentMetadataRepo;
@@ -36,10 +37,11 @@ public class DocumentMetadataService {
     private final ModelMapper modelMapper;
 
 //    Method to upload and parse document
-    public DocumentResponseDto uploadAndProcess(MultipartFile file) {
+    public DocumentResponseDto uploadAndProcess(MultipartFile file, User user) {
 
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "Document";
         String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+
         //document meta data create
         //storing the user detail with document metadata
         DocumentMetadata documentMetadata = DocumentMetadata
@@ -49,6 +51,7 @@ public class DocumentMetadataService {
                 .status(DocumentStatus.UPLOADING)
                 .fileSize(file.getSize())
                 .createdAt(LocalDateTime.now())
+                .user(user)
                 .build();
 
         documentMetadata = documentMetadataRepo.save(documentMetadata);
@@ -76,25 +79,33 @@ public class DocumentMetadataService {
                 .chunksCreated(chunksCreated)
                 .status(documentMetadata.getStatus())
                 .message("Document successfully processed and indexed.")
+                .userId(user.getId())
                 .build();
     }
 
-    public List<DocumentResponseDto> uploadMultipleDocuments(List<MultipartFile> files) {
+    public List<DocumentResponseDto> uploadMultipleDocuments(List<MultipartFile> files, User user) {
 
         List<DocumentResponseDto> responseDtos = new ArrayList<>();
 
         for(MultipartFile file: files){
-            DocumentResponseDto result = this.uploadAndProcess(file);
+            DocumentResponseDto result = this.uploadAndProcess(file, user);
             responseDtos.add(result);
         }
 
         return responseDtos;
     }
 
+//    to get all the documents: This method is useful for admin
     public List<DocumentMetadataDto> getAllDocuments() {
         List<DocumentMetadata> allDocuments = documentMetadataRepo.findAllByOrderByCreatedAtDesc();
 
         return allDocuments.stream().map(documentMetadata -> modelMapper.map(documentMetadata, DocumentMetadataDto.class))
+                .toList();
+    }
+
+    public List<DocumentMetadataDto> getAllDocumentsByUser(User user){
+        List<DocumentMetadata> documents =  documentMetadataRepo.findByUserOrderByCreatedAtDesc(user);
+        return documents.stream().map(documentMetadata -> modelMapper.map(documentMetadata, DocumentMetadataDto.class))
                 .toList();
     }
 

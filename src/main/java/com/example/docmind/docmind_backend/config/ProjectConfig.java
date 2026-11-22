@@ -5,6 +5,8 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import org.modelmapper.ModelMapper;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class ProjectConfig {
 
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder){
+    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory memory){
         return builder
                 .defaultSystem("""
                                                                         You are DocMind, an intelligent, versatile, and friendly AI document intelligence assistant.                       \s
@@ -29,6 +31,7 @@ public class ProjectConfig {
                         
                                                                         Produce markdown output.
                         """)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
                 .build();
     }
 

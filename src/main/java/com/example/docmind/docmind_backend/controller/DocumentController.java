@@ -5,13 +5,17 @@ import com.example.docmind.docmind_backend.dto.ApiResponse;
 import com.example.docmind.docmind_backend.dto.ChunkDto;
 import com.example.docmind.docmind_backend.dto.DocumentMetadataDto;
 import com.example.docmind.docmind_backend.dto.DocumentResponseDto;
+import com.example.docmind.docmind_backend.entity.User;
 import com.example.docmind.docmind_backend.service.DocumentMetadataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +30,7 @@ import java.util.UUID;
         description = "Endpoints for uploading, listing and managing documents and their vectors embeddings."
 )
 @RequiredArgsConstructor
+@Slf4j
 public class DocumentController {
 
     private final DocumentMetadataService documentService;
@@ -36,11 +41,16 @@ public class DocumentController {
             description = "This api is used to upload and index documents files."
     )
     public ResponseEntity<ApiResponse<DocumentResponseDto>> uploadDocument(
-            @RequestParam("file")MultipartFile file
+            @RequestParam("file")MultipartFile file,
+            Authentication authentication
             ) {
 
+        log.info("document uploading started");
+
+        User user = (User) authentication.getPrincipal();
+
         // Process the files
-        DocumentResponseDto documentResponseDto = this.documentService.uploadAndProcess(file);
+        DocumentResponseDto documentResponseDto = this.documentService.uploadAndProcess(file, user);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.<DocumentResponseDto>builder()
                         .success(true)
@@ -58,9 +68,12 @@ public class DocumentController {
     )
     public ResponseEntity<ApiResponse<List<DocumentResponseDto>>> uploadMultiple(
             @RequestParam("files")
-            List<MultipartFile> files
+            List<MultipartFile> files,
+            Authentication authentication
     ){
-        List<DocumentResponseDto> responseDtos = documentService.uploadMultipleDocuments(files);
+
+        User user = (User) authentication.getPrincipal();
+        List<DocumentResponseDto> responseDtos = documentService.uploadMultipleDocuments(files, user);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(
                         ApiResponse.<List<DocumentResponseDto>>
@@ -74,6 +87,8 @@ public class DocumentController {
     }
 
 //    List all uploaded documents
+//    Method of Admin
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     @Operation(summary = "List all the uploaded documents and their indexing status")
     public ResponseEntity<ApiResponse<List<DocumentMetadataDto>>> getAllDocuments(){
@@ -87,6 +102,26 @@ public class DocumentController {
                                 .data(documents)
                                 .build()
                 );
+    }
+
+    //    List all uploaded documents of logged in user
+    @GetMapping("/user")
+    @Operation(summary = "List all the uploaded documents and their indexing status of logged user")
+    public ResponseEntity<ApiResponse<List<DocumentMetadataDto>>> getAllDocumentsOfLoggedInUser(
+            Authentication authentication
+    ){
+        User user = (User) authentication.getPrincipal();
+
+        List<DocumentMetadataDto> documents = documentService.getAllDocumentsByUser(user);
+        return ResponseEntity.ok(
+                ApiResponse.<List<DocumentMetadataDto>>
+                                builder()
+                        .message("All Documents is here")
+                        .success(true)
+                        .timestamp(LocalDateTime.now())
+                        .data(documents)
+                        .build()
+        );
     }
 
     @GetMapping("/{id}")
