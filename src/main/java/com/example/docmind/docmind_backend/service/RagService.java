@@ -2,7 +2,9 @@ package com.example.docmind.docmind_backend.service;
 
 import com.example.docmind.docmind_backend.config.AppProperties;
 import com.example.docmind.docmind_backend.dto.*;
+import com.example.docmind.docmind_backend.entity.Conversation;
 import com.example.docmind.docmind_backend.entity.User;
+import com.example.docmind.docmind_backend.repository.ConversationRepository;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -17,6 +19,7 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,10 +34,18 @@ public class RagService {
     private final AppProperties appProperties;
     private final ChatClient chatClient;
 
+    private final ConversationRepository conversationRepository;
+
     //to ask any thing related to document
     public ChatResponseDto askQuestion(ChatRequestDto request, User user){
 
         Long startTime = System.currentTimeMillis();
+
+
+        String conversationId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
+
+        ensureConversationExists(conversationId, user, request.getQuestion());
+
         log.info("Processing query: '{}', scoped documentId: {}", request.getQuestion(), request.getDocumentId());
         List<Document> similarDocuments = this.retrieveRelevantDocuments(
                 request.getQuestion(),
@@ -49,10 +60,11 @@ public class RagService {
                 .toList();
 
         String contextText = buildContextString(similarDocuments);
-        String prompt = buildPrompt(request.getQuestion(), contextText);
+//        String prompt = buildPrompt(request.getQuestion(), contextText);
 
         String answer = this.chatClient.prompt()
-                .user(prompt)
+                .system(s->s.param("doc_context", contextText))
+                .user(request.getQuestion())
                 .advisors(a-> a.param(ChatMemory.CONVERSATION_ID, request.getConversationId()))
                 .call()
                 .content();
@@ -68,6 +80,21 @@ public class RagService {
 
     }
 
+    private void ensureConversationExists(String conversationId, User user, @NotBlank(message = "Question cannot be empty") String question) {
+
+        conversationRepository.findByIdAndUser(conversationId, user)
+                .orElseGet(()-> {
+                    String title = question.length() > 50 ? question.substring(0, 47) + "..." : question;
+                    return conversationRepository.save(
+                            Conversation.builder().id(conversationId)
+                                    .title(title)
+                                    .user(user)
+                                    .createdAt(LocalDateTime.now())
+                                    .updatedAt(LocalDateTime.now())                                    .build()
+                    );
+                });
+    }
+
     // this streams
     public Flux<String> streamQuestionAnswer(ChatRequestDto requestDto, User user){
         log.info("Streaming query: '{}'", requestDto.getQuestion());
@@ -80,9 +107,10 @@ public class RagService {
         );
 
         String contextText = buildContextString(relevantDocuments);
-        String userPrompt = buildPrompt(requestDto.getQuestion(), contextText);
+//        String userPrompt = buildPrompt(requestDto.getQuestion(), contextText);
         return chatClient.prompt()
-                .user(userPrompt)
+                .system(s->s.param("doc_context", contextText))
+                .user(requestDto.getQuestion())
                 .advisors(a-> a.param(ChatMemory.CONVERSATION_ID, requestDto.getConversationId()))
                 .stream().content();
     }
@@ -98,7 +126,7 @@ public class RagService {
                            Instructions:
                            - If the user's question relates to the document context above, prioritize answering using that context and reference key sections.
                            - If the user is asking a general question, greeting, or discussing topics beyond the document context, respond helpfully and conversationally using your general knowledge while weaving in relevant document context if applicable
-                    
+
                     """, contextText, question);
         } else {
             return String.format("""
@@ -106,7 +134,7 @@ public class RagService {
                        %s                         
                        Instructions:
                           - Respond helpfully, accurately, and conversationally to the user's message using your broad knowledge base.
-                    
+
                     """, question);
         }
     }

@@ -1,4 +1,7 @@
 package com.example.docmind.docmind_backend.entity;
 
-public class MessageType {
+public enum MessageType {
+    USER,
+    ASSISTANT,
+    SYSTEM
 }

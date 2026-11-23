@@ -1,20 +1,28 @@
 package com.example.docmind.docmind_backend.config;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@Slf4j
 @Configuration
 public class ProjectConfig {
 
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder, ChatMemory memory){
+
+        log.info("Chatmemory class name {} ", memory.getClass().getName());
         return builder
                 .defaultSystem("""
                                                                         You are DocMind, an intelligent, versatile, and friendly AI document intelligence assistant.                       \s
@@ -31,12 +39,15 @@ public class ProjectConfig {
                         
                                                                         Produce markdown output.
                         """)
-                .defaultAdvisors(MessageChatMemoryAdvisor.builder(memory).build())
+                .defaultAdvisors(new SimpleLoggerAdvisor(),MessageChatMemoryAdvisor.builder(memory).build())
                 .build();
     }
 
     @Bean
     public OpenAPI openAPI(){
+
+        String securitySchemeName = "bearerAuth";
+
         return new OpenAPI().info(
                 new Info()
                         .title("DocMind - AI Document Intelligence & RAG backend")
@@ -47,6 +58,17 @@ public class ProjectConfig {
                                 .email("phonsaakshit@gmail.com")
                                 .url("https://portfolio-vue-inky-iota.vercel.app")
                         )
+                ).components(new Components()
+                                .addSecuritySchemes(
+                                        securitySchemeName,
+                                        new SecurityScheme()
+                                                .name(securitySchemeName)
+                                                .type(SecurityScheme.Type.HTTP)
+                                                .scheme("bearer")
+                                                .bearerFormat("JWT")
+                                )).addSecurityItem(
+                                new SecurityRequirement()
+                                        .addList(securitySchemeName)
         );
     }
 
