@@ -13,3 +13,6 @@ export const TEMPLATES = [
   { icon: '📝', title: 'Action Items & Deadlines', prompt: 'List all actionable takeaways, deadlines, and responsibilities mentioned.', desc: 'List all actionable takeaways, deadlines, and responsibilities mentioned.' },
   { icon: '🔍', title: 'Technical Concepts', prompt: 'Explain the main technical concepts and architecture described in this document.', desc: 'Explain the main technical concepts and architecture described in this document.' },
 ]
+
+export const errMsg = (e) =>
+  e.response?.data?.message || e.response?.data?.error || e.message || 'Request failed'

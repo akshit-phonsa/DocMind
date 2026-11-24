@@ -1,11 +1,28 @@
 import axios from 'axios'
+import { useAuthStore } from '../store/authStore.js'
+import { authFetch } from './authFetch.js'
+import { handleUnauthorized } from './session.js'
+import { errMsg } from './utils.js'
 
 const http = axios.create({ baseURL: '/api/v1' })
 
+// Outside the React tree, so read the token straight from the store.
+http.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+http.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) handleUnauthorized()
+    return Promise.reject(err)
+  },
+)
+
 // Backend wraps everything in { success, message, data, timestamp }
 const unwrap = (res) => res.data?.data
-const errMsg = (e) =>
-  e.response?.data?.message || e.response?.data?.error || e.message || 'Request failed'
 
 async function call(p) {
   try {
@@ -15,7 +32,9 @@ async function call(p) {
   }
 }
 
+// GET /documents is ADMIN-only (403 for normal users); the normal list is GET /documents/user.
 export const listDocuments = () => call(http.get('/documents'))
+export const listMyDocuments = () => call(http.get('/documents/user'))
 export const getDocument = (id) => call(http.get(`/documents/${id}`))
 export const getDocumentChunks = (id) => call(http.get(`/documents/${id}/chunks`))
 export const deleteDocument = (id) => call(http.delete(`/documents/${id}`))
@@ -30,6 +49,11 @@ export const uploadDocument = (file, onProgress) => {
   )
 }
 
+export const documentApi = {
+  getMine: listMyDocuments,
+  getAll: listDocuments, // reserved for a future admin-gated view (user.role === 'ADMIN')
+}
+
 export const askQuestion = (body) => call(http.post('/chat/query', body))
 export const searchChunks = (body) => call(http.post('/chat/search/similarity', body))
 
@@ -37,7 +61,7 @@ export const searchChunks = (body) => call(http.post('/chat/search/similarity', 
  * Streams answer tokens. Handles both raw chunked text and SSE "data:" framing.
  */
 export async function streamQuestion(body, onToken, signal) {
-  const res = await fetch('/api/v1/chat/stream', {
+  const res = await authFetch('/api/v1/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, text/plain' },
     body: JSON.stringify(body),
@@ -46,6 +70,7 @@ export async function streamQuestion(body, onToken, signal) {
   if (!res.ok) {
     let msg = `Request failed (${res.status})`
     try { msg = (await res.json()).message || msg } catch { /* ignore */ }
+    if (res.status === 401) msg = 'Session expired. Please sign in again.'
     throw new Error(msg)
   }
   const reader = res.body.getReader()
@@ -61,7 +86,9 @@ export async function streamQuestion(body, onToken, signal) {
     const events = buf.replace(/\r\n/g, '\n').split('\n\n')
     buf = events.pop()
     for (const ev of events) {
-      const data = ev.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5)).join('\n')
+      const lines = ev.split('\n')
+      if (lines.some((l) => l.startsWith('event:done'))) { await reader.cancel().catch(() => {}); return }
+      const data = lines.filter((l) => l.startsWith('data:')).map((l) => l.slice(5)).join('\n')
       if (data) onToken(data)
     }
   }

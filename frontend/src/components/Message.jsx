@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Bot, Check, ChevronDown, Copy, FileText, RefreshCw, ThumbsDown, ThumbsUp, User, Clock } from 'lucide-react'
 import Markdown from './Markdown.jsx'
 
@@ -8,7 +8,7 @@ const FOLLOW_UPS = ['Explain in more detail', 'Summarize as bullet points', 'Giv
 
 function Thinking() {
   return (
-    <div className="flex items-center gap-2 py-1 text-sm text-slate-500">
+    <div className="flex items-center gap-2 py-1 text-sm text-slate-600 dark:text-slate-400">
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => <span key={i} className="dot size-2 rounded-full bg-blue-500" style={{ animationDelay: `${i * 0.16}s` }} />)}
       </span>
@@ -23,7 +23,7 @@ function Sources({ citations }) {
   const files = [...new Set(citations.map((c) => c.fileName))]
   return (
     <div className="mt-4">
-      <button onClick={() => setOpen(!open)} className="flex flex-wrap items-center gap-2 text-xs">
+      <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex flex-wrap rounded items-center gap-2 text-xs">
         <span className="flex items-center gap-1 font-semibold text-blue-500">
           <ChevronDown size={14} className={`transition ${open ? 'rotate-180' : ''}`} />
           {citations.length} source{citations.length > 1 ? 's' : ''}
@@ -43,7 +43,7 @@ function Sources({ citations }) {
                   <FileText size={12} className="shrink-0 text-slate-400" />
                   <span className="truncate">{c.fileName}</span>
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">Chunk #{c.chunkIndex}{c.pageNumber != null && ` • Page ${c.pageNumber}`}</div>
+                <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Chunk #{c.chunkIndex}{c.pageNumber != null && ` • Page ${c.pageNumber}`}</div>
                 <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{c.snippet}</p>
                 {c.similarityScore != null && (
                   <div className="mt-2.5 flex items-center gap-2">
@@ -67,24 +67,25 @@ function IconBtn({ onClick, label, active, children }) {
     <button
       onClick={onClick}
       aria-label={label}
+      aria-pressed={active === undefined ? undefined : !!active}
       title={label}
-      className={`rounded-lg p-1.5 transition hover:bg-slate-100 dark:hover:bg-white/10 ${active ? 'text-blue-500' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+      className={`rounded-lg p-1.5 transition hover:bg-slate-100 dark:hover:bg-white/10 ${active ? 'text-blue-500' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
     >
       {children}
     </button>
   )
 }
 
-export default function Message({ m, isLast, busy, onRegenerate, onFollowUp }) {
+function Message({ m, isLast, busy, onRegenerate, onFollowUp }) {
   const [copied, setCopied] = useState(false)
   const [vote, setVote] = useState(null)
 
   if (m.role === 'user') {
     return (
       <div className="animate-fade-up flex items-end justify-end gap-2.5">
-        <div className="flex max-w-[70%] flex-col items-end">
-          <span className="mb-1 mr-1 text-[11px] text-slate-400">You • {time(m.at)}</span>
-          <div className="whitespace-pre-wrap rounded-2xl rounded-br-sm bg-gradient-to-br from-blue-500 to-blue-700 px-4 py-2.5 text-[15px] leading-relaxed text-white shadow-md shadow-blue-600/20">{m.content}</div>
+        <div className="flex max-w-[85%] flex-col sm:max-w-[70%] items-end">
+          <span className="mb-1 mr-1 text-[11px] text-slate-500 dark:text-slate-400">You • {time(m.at)}</span>
+          <div className="whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-gradient-to-br from-blue-500 to-blue-700 px-4 py-2.5 text-[15px] leading-relaxed text-white shadow-md shadow-blue-600/20">{m.content}</div>
         </div>
         <div className="mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-300"><User size={15} /></div>
       </div>
@@ -95,9 +96,9 @@ export default function Message({ m, isLast, busy, onRegenerate, onFollowUp }) {
   return (
     <div className="group animate-fade-up flex items-end gap-2.5">
       <div className={`mb-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-md shadow-blue-600/30 ${m.pending ? 'animate-pulse' : ''}`}><Bot size={15} /></div>
-      <div className="min-w-0 max-w-[78%]">
-        <span className="mb-1 ml-1 block text-[11px] text-slate-400">DocMind • {time(m.at)}</span>
-        <div className={`rounded-2xl rounded-bl-sm border px-4 py-2.5 shadow-sm ${m.error ? 'border-red-500/40 bg-red-500/10 text-red-500' : 'border-slate-200 bg-white dark:border-white/5 dark:bg-ink-850'}`}>
+      <div className="min-w-0 max-w-[88%] sm:max-w-[78%]">
+        <span className="mb-1 ml-1 block text-[11px] text-slate-500 dark:text-slate-400">DocMind • {time(m.at)}</span>
+        <div className={`overflow-hidden break-words rounded-2xl rounded-bl-sm border px-4 py-2.5 shadow-sm ${m.error ? 'border-red-500/40 bg-red-500/10 text-red-500' : 'border-slate-200 bg-white dark:border-white/5 dark:bg-ink-850'}`}>
           {m.content ? (
             <div className={m.pending ? 'cursor' : ''}><Markdown>{m.content}</Markdown></div>
           ) : m.pending ? <Thinking /> : null}
@@ -113,7 +114,7 @@ export default function Message({ m, isLast, busy, onRegenerate, onFollowUp }) {
             <IconBtn label="Bad answer" active={vote === 'down'} onClick={() => setVote(vote === 'down' ? null : 'down')}><ThumbsDown size={15} /></IconBtn>
             {isLast && !busy && <IconBtn label="Regenerate" onClick={onRegenerate}><RefreshCw size={15} /></IconBtn>}
             {m.responseTimeMs != null && (
-              <span className="ml-2 flex items-center gap-1 text-xs text-slate-400"><Clock size={12} />{(m.responseTimeMs / 1000).toFixed(1)}s</span>
+              <span className="ml-2 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><Clock size={12} />{(m.responseTimeMs / 1000).toFixed(1)}s</span>
             )}
           </div>
         )}
@@ -135,3 +136,7 @@ export default function Message({ m, isLast, busy, onRegenerate, onFollowUp }) {
     </div>
   )
 }
+
+// Streaming rewrites only the last message; skip re-rendering (and re-parsing markdown for) all the others.
+// Handlers/busy are only used by the last message, so they're ignored for earlier ones; the last one always re-renders.
+export default memo(Message, (a, b) => a.m === b.m && !a.isLast && !b.isLast)

@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -46,14 +48,17 @@ public class ChatController {
         );
     }
 
-    @PostMapping("/stream")
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "Stream real-time Q&A answer tokens via Server-Sent Events (SSE)")
-    public Flux<String> streamQuestion(
+    public Flux<ServerSentEvent<String>> streamQuestion(
             @Valid @RequestBody ChatRequestDto requestDto,
             Authentication authentication
     ) {
         User user = (User) authentication.getPrincipal();
-        return ragService.streamQuestionAnswer(requestDto, user);
+        return ragService.streamQuestionAnswer(requestDto, user)
+                .map(token -> ServerSentEvent.<String>builder().data(token).build())
+                // explicit terminator so the client can finish without waiting for the connection to close
+                .concatWith(Flux.just(ServerSentEvent.<String>builder().event("done").data("[DONE]").build()));
     }
 
     @PostMapping("/search/similarity")
