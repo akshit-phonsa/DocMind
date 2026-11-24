@@ -1,6 +1,7 @@
 package com.example.docmind.docmind_backend.config;
 
 import com.example.docmind.docmind_backend.entity.Role;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,10 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth-> auth
+                        // Streaming (SSE) responses re-enter the filter chain as an ASYNC dispatch, where the JWT filter
+                        // (a OncePerRequestFilter) doesn't run again, so no authentication is present. The original
+                        // request was already authorized; denying the dispatch would abort the stream mid-response.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/v1/auth/**"
                                 ,"/v3/api-docs/**",
                                 "/swagger-ui/**",
