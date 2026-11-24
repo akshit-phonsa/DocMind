@@ -62,7 +62,12 @@ export default function Chat({ scopeDoc, hasDocs }) {
       if (stream) {
         abort.current = new AbortController()
         streamingId.current = convId
-        await streamQuestion(body, (t) => patchLast(convId, (m) => ({ content: m.content + t })), abort.current.signal)
+        await streamQuestion(
+          body,
+          (t) => patchLast(convId, (m) => ({ content: m.content + t })),
+          abort.current.signal,
+          (citations) => patchLast(convId, { citations }),
+        )
         patchLast(convId, { pending: false, responseTimeMs: Date.now() - started })
         persist(convId)
       } else {

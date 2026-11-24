@@ -59,8 +59,9 @@ export const searchChunks = (body) => call(http.post('/chat/search/similarity', 
 
 /**
  * Streams answer tokens. Handles both raw chunked text and SSE "data:" framing.
+ * SSE events: unnamed = token, `citations` = JSON array of sources (sent first), `done` = end of stream.
  */
-export async function streamQuestion(body, onToken, signal) {
+export async function streamQuestion(body, onToken, signal, onCitations) {
   const res = await authFetch('/api/v1/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, text/plain' },
@@ -87,9 +88,12 @@ export async function streamQuestion(body, onToken, signal) {
     buf = events.pop()
     for (const ev of events) {
       const lines = ev.split('\n')
-      if (lines.some((l) => l.startsWith('event:done'))) { await reader.cancel().catch(() => {}); return }
+      const name = lines.find((l) => l.startsWith('event:'))?.slice(6).trim()
+      if (name === 'done') { await reader.cancel().catch(() => {}); return }
       const data = lines.filter((l) => l.startsWith('data:')).map((l) => l.slice(5)).join('\n')
-      if (data) onToken(data)
+      if (name === 'citations') {
+        try { onCitations?.(JSON.parse(data)) } catch { /* sources are optional; ignore malformed */ }
+      } else if (data) onToken(data)
     }
   }
   if (sse && buf.startsWith('data:')) onToken(buf.slice(5))

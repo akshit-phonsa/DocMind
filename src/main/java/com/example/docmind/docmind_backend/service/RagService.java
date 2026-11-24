@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import org.springframework.http.codec.ServerSentEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class RagService {
     private final ChatClient chatClient;
 
     private final ConversationRepository conversationRepository;
+    private final ObjectMapper objectMapper;
 
     //to ask any thing related to document
     public ChatResponseDto askQuestion(ChatRequestDto request, User user){
@@ -65,14 +69,14 @@ public class RagService {
         String answer = this.chatClient.prompt()
                 .system(s->s.param("doc_context", contextText))
                 .user(request.getQuestion())
-                .advisors(a-> a.param(ChatMemory.CONVERSATION_ID, request.getConversationId()))
+                .advisors(a-> a.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .call()
                 .content();
         long responseTime = System.currentTimeMillis() - startTime;
         log.info("Completed Q&A in {} ms with {} citations", responseTime, citationDtos.size());
         return ChatResponseDto.builder()
                 .answer(answer)
-                .conversationId(request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString())
+                .conversationId(conversationId)
                 .citations(citationDtos)
                 .responseTimeMs(responseTime)
                 .build();
@@ -96,7 +100,7 @@ public class RagService {
     }
 
     // this streams
-    public Flux<String> streamQuestionAnswer(ChatRequestDto requestDto, User user){
+    public Flux<ServerSentEvent<String>> streamQuestionAnswer(ChatRequestDto requestDto, User user){
         log.info("Streaming query: '{}'", requestDto.getQuestion());
         String conversationId = requestDto.getConversationId() != null ? requestDto.getConversationId() : UUID.randomUUID().toString();
         ensureConversationExists(conversationId, user, requestDto.getQuestion());
@@ -110,11 +114,28 @@ public class RagService {
 
         String contextText = buildContextString(relevantDocuments);
 //        String userPrompt = buildPrompt(requestDto.getQuestion(), contextText);
-        return chatClient.prompt()
+        // Sources are known before generation starts, so send them first as their own event.
+        String citationsJson;
+        try {
+            citationsJson = objectMapper.writeValueAsString(relevantDocuments.stream().map(this::mapToCitation).toList());
+        } catch (JacksonException e) {
+            log.warn("Could not serialize citations", e);
+            citationsJson = "[]";
+        }
+
+        Flux<ServerSentEvent<String>> tokens = chatClient.prompt()
                 .system(s->s.param("doc_context", contextText))
                 .user(requestDto.getQuestion())
                 .advisors(a-> a.param(ChatMemory.CONVERSATION_ID, conversationId))
-                .stream().content();
+                .stream().content()
+                .map(token -> ServerSentEvent.<String>builder().data(token).build());
+
+        return Flux.concat(
+                Flux.just(ServerSentEvent.<String>builder().event("citations").data(citationsJson).build()),
+                tokens,
+                // explicit terminator so the client can finish without waiting for the connection to close
+                Flux.just(ServerSentEvent.<String>builder().event("done").data("[DONE]").build())
+        );
     }
 
     private String buildPrompt(String question, String contextText) {

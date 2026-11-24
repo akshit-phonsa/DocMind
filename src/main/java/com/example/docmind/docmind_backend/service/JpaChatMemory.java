@@ -37,18 +37,10 @@ public class JpaChatMemory implements ChatMemory {
             return;
         }
 
+        // RagService creates the conversation (with its owner) before the advisor runs; a placeholder
+        // here would have no user and violate the NOT NULL constraint on conversations.user_id.
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseGet(() -> {
-                    log.warn("Conversation {} not found when adding messages. Creating placeholder.", conversationId);
-                    return conversationRepository.save(
-                            Conversation.builder()
-                                    .id(conversationId)
-                                    .title("New Conversation")
-                                    .createdAt(LocalDateTime.now())
-                                    .updatedAt(LocalDateTime.now())
-                                    .build()
-                    );
-                });
+                .orElseThrow(() -> new IllegalStateException("Conversation " + conversationId + " must exist before messages are added"));
 
         for(Message msg: messages){
             MessageType type = switch(msg.getMessageType()){

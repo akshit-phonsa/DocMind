@@ -55,10 +55,7 @@ public class ChatController {
             Authentication authentication
     ) {
         User user = (User) authentication.getPrincipal();
-        return ragService.streamQuestionAnswer(requestDto, user)
-                .map(token -> ServerSentEvent.<String>builder().data(token).build())
-                // explicit terminator so the client can finish without waiting for the connection to close
-                .concatWith(Flux.just(ServerSentEvent.<String>builder().event("done").data("[DONE]").build()));
+        return ragService.streamQuestionAnswer(requestDto, user);
     }
 
     @PostMapping("/search/similarity")
