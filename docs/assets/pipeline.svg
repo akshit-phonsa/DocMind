@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300" role="img" aria-label="RAG pipeline: ingest, embed, retrieve, generate">
+  <style>
+    text{font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;fill:#e2e8f0}
+    .n{fill:#0f1528;stroke:#3b82f6;stroke-width:1.5}
+    .t{font-size:15px;font-weight:700;text-anchor:middle}
+    .s{font-size:11px;text-anchor:middle;fill:#94a3b8}
+    .lbl{font-size:12px;font-weight:700;letter-spacing:2px;fill:#60a5fa}
+    .pulse{animation:p 4s ease-in-out infinite}
+    @keyframes p{0%,100%{stroke:#3b82f6}50%{stroke:#22d3ee}}
+  </style>
+  <rect width="1000" height="300" rx="22" fill="#060912"/>
+  <text class="lbl" x="40" y="42">INGEST</text><text class="lbl" x="40" y="190">QUERY</text>
+
+  <path id="a" d="M110 90 H890" stroke="#1e2740" stroke-width="2" stroke-dasharray="5 6" fill="none"/>
+  <path id="b" d="M110 238 H890" stroke="#1e2740" stroke-width="2" stroke-dasharray="5 6" fill="none"/>
+
+  <g>
+    <rect class="n pulse" x="60" y="62" width="150" height="56" rx="14"/><text class="t" x="135" y="87">Upload</text><text class="s" x="135" y="104">PDF · DOCX · MD · TXT</text>
+    <rect class="n pulse" x="275" y="62" width="150" height="56" rx="14" style="animation-delay:.6s"/><text class="t" x="350" y="87">Parse + Chunk</text><text class="s" x="350" y="104">Tika / PDF reader</text>
+    <rect class="n pulse" x="490" y="62" width="150" height="56" rx="14" style="animation-delay:1.2s"/><text class="t" x="565" y="87">Embed</text><text class="s" x="565" y="104">text-embedding-3-small</text>
+    <rect class="n pulse" x="705" y="62" width="235" height="56" rx="14" style="animation-delay:1.8s"/><text class="t" x="822" y="87">PostgreSQL + pgvector</text><text class="s" x="822" y="104">HNSW · cosine · 1536 dims</text>
+  </g>
+  <g>
+    <rect class="n pulse" x="60" y="210" width="150" height="56" rx="14"/><text class="t" x="135" y="235">Question</text><text class="s" x="135" y="252">+ conversationId</text>
+    <rect class="n pulse" x="275" y="210" width="150" height="56" rx="14" style="animation-delay:.6s"/><text class="t" x="350" y="235">Similarity search</text><text class="s" x="350" y="252">top-K · min score</text>
+    <rect class="n pulse" x="490" y="210" width="150" height="56" rx="14" style="animation-delay:1.2s"/><text class="t" x="565" y="235">LLM + memory</text><text class="s" x="565" y="252">gpt-4o-mini</text>
+    <rect class="n pulse" x="705" y="210" width="235" height="56" rx="14" style="animation-delay:1.8s"/><text class="t" x="822" y="235">Streamed answer</text><text class="s" x="822" y="252">with page-level citations</text>
+  </g>
+
+  <path d="M822 118 V150 H350 V210" stroke="#1e2740" stroke-width="2" stroke-dasharray="5 6" fill="none"/>
+  <g fill="#22d3ee">
+    <circle r="5"><animateMotion dur="5s" repeatCount="indefinite" path="M110 90 H890"/></circle>
+    <circle r="5" opacity=".6"><animateMotion dur="5s" begin="2.5s" repeatCount="indefinite" path="M110 90 H890"/></circle>
+  </g>
+  <g fill="#8b5cf6">
+    <circle r="5"><animateMotion dur="5s" repeatCount="indefinite" path="M110 238 H890"/></circle>
+    <circle r="5" opacity=".6"><animateMotion dur="5s" begin="2.5s" repeatCount="indefinite" path="M110 238 H890"/></circle>
+  </g>
+  <circle r="4" fill="#60a5fa"><animateMotion dur="3s" repeatCount="indefinite" path="M822 118 V150 H350 V210"/></circle>
+</svg>
